@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Language Translator</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <img src="/static/chatbot.jpg" alt="AI Bot" class="bot-image"><br>
+
+    <!-- 🔇 Speaker Toggle -->
+    <button id="speaker-btn" onclick="toggleSpeaker()" title="Toggle Speech">🔇</button>
+
+    <h1>🌐 Language Translator</h1>
+
+    <textarea id="text-input" placeholder="Enter text to translate..."></textarea><br>
+
+    <!-- 🎤 Voice Input Button -->
+    <button onclick="startListening()" title="Speak using microphone">🎤 Speak</button><br><br>
+
+    <!-- Language Selectors -->
+    <label>From:</label>
+    <select id="source-lang">
+      <!-- Indian Languages -->
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="te">Telugu</option>
+      <option value="ta">Tamil</option>
+      <option value="kn">Kannada</option>
+      <option value="ml">Malayalam</option>
+      <option value="mr">Marathi</option>
+      <option value="bn">Bengali</option>
+      
+
+      <!-- Foreign Languages -->
+      <option value="fr">French</option>
+      <option value="es">Spanish</option>
+      <option value="de">German</option>
+      <option value="it">Italian</option>
+      <option value="zh-CN">Chinese (Simplified)</option>
+      <option value="zh-TW">Chinese (Traditional)</option>
+      <option value="ja">Japanese</option>
+      <option value="ko">Korean</option>
+      <option value="ru">Russian</option>
+      <option value="ar">Arabic</option>
+      <option value="pt">Portuguese</option>
+      <option value="tr">Turkish</option>
+      <option value="vi">Vietnamese</option>
+      <option value="th">Thai</option>
+      <option value="sw">Swahili</option>
+      <option value="id">Indonesian</option>
+      <option value="pl">Polish</option>
+      <option value="nl">Dutch</option>
+    </select>
+
+    <label>To:</label>
+    <select id="target-lang">
+      <!-- Indian Languages -->
+      <option value="hi">Hindi</option>
+      <option value="en">English</option>
+      <option value="te">Telugu</option>
+      <option value="ta">Tamil</option>
+      <option value="kn">Kannada</option>
+      <option value="ml">Malayalam</option>
+      <option value="mr">Marathi</option>
+      <option value="bn">Bengali</option>
+     
+
+      <!-- Foreign Languages -->
+      <option value="fr">French</option>
+      <option value="es">Spanish</option>
+      <option value="de">German</option>
+      <option value="it">Italian</option>
+      <option value="zh-CN">Chinese (Simplified)</option>
+      <option value="zh-TW">Chinese (Traditional)</option>
+      <option value="ja">Japanese</option>
+      <option value="ko">Korean</option>
+      <option value="ru">Russian</option>
+      <option value="ar">Arabic</option>
+      <option value="pt">Portuguese</option>
+      <option value="tr">Turkish</option>
+      <option value="vi">Vietnamese</option>
+      <option value="th">Thai</option>
+      <option value="sw">Swahili</option>
+      <option value="id">Indonesian</option>
+      <option value="pl">Polish</option>
+      <option value="nl">Dutch</option>
+    </select>
+
+    <br><br>
+    <button onclick="translateText()">Translate</button>
+
+    <!-- Output Display -->
+    <div class="card-output">
+      <h2>Your Translated Text</h2>
+      <div class="output-box" id="translated-output">--</div>
+    </div>
+  </div>
+
+  <script>
+    let isMuted = true;
+    const unsupportedSpeechLangs = ['pa', 'gu', 'or']; // Extend as needed
+
+    function toggleSpeaker() {
+      isMuted = !isMuted;
+      document.getElementById("speaker-btn").textContent = isMuted ? "🔇" : "🔊";
+    }
+
+    function startListening() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported in this browser.");
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = document.getElementById("source-lang").value + "-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = function(event) {
+        const spokenText = event.results[0][0].transcript;
+        document.getElementById("text-input").value = spokenText;
+      };
+
+      recognition.onerror = function(event) {
+        alert("Speech Recognition Error: " + event.error);
+      };
+
+      recognition.start();
+    }
+
+    function speakText(text, langCode) {
+      if (!isMuted && text.trim() !== "") {
+        let speakLang;
+        if (langCode === "zh-CN" || langCode === "zh-TW") speakLang = "zh-CN";
+        else if (langCode.includes("-")) speakLang = langCode;
+        else speakLang = unsupportedSpeechLangs.includes(langCode) ? "en-US" : langCode + "-IN";
+
+        const utterance = new SpeechSynthesisUtterance();
+        utterance.text = text;
+        utterance.lang = speakLang;
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    async function translateText() {
+      const text = document.getElementById("text-input").value.trim();
+      const source = document.getElementById("source-lang").value;
+      const target = document.getElementById("target-lang").value;
+      const translatedOutput = document.getElementById("translated-output");
+
+      if (text === "") {
+        translatedOutput.innerText = "⚠ Please enter some text.";
+        return;
+      }
+
+      translatedOutput.innerText = "Translating...";
+
+      try {
+        const response = await fetch('/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, source, target })
+        });
+
+        const result = await response.json();
+        const translated = result.translated || "❌ Error in translation.";
+        translatedOutput.innerText = translated;
+
+        speakText(translated, target);
+      } catch (err) {
+        translatedOutput.innerText = "❌ " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
